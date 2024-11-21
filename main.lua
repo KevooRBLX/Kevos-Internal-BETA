@@ -1,7 +1,11 @@
 -- Create GUI Elements
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
+local mouse = player:GetMouse()
 
 -- Main ScreenGui
 local screenGui = Instance.new("ScreenGui")
@@ -80,3 +84,56 @@ notificationFrame:TweenPosition(
         notificationFrame.Visible = false
     end
 )
+
+-- Aimlock Variables
+local aimlockEnabled = false
+
+-- Function to get the closest player to the mouse
+local function getClosestPlayerToMouse()
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+
+    for _, target in ipairs(Players:GetPlayers()) do
+        if target ~= player and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            local character = target.Character
+            local rootPart = character.HumanoidRootPart
+            local screenPos = workspace.CurrentCamera:WorldToScreenPoint(rootPart.Position)
+
+            if rootPart and rootPart.Parent then
+                local distance = (Vector2.new(mouse.X, mouse.Y) - Vector2.new(screenPos.X, screenPos.Y)).Magnitude
+                if distance < shortestDistance then
+                    closestPlayer = target
+                    shortestDistance = distance
+                end
+            end
+        end
+    end
+
+    return closestPlayer
+end
+
+-- Aimlock functionality
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+
+    if input.KeyCode == Enum.KeyCode.E then
+        aimlockEnabled = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.E then
+        aimlockEnabled = false
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if aimlockEnabled then
+        local closestPlayer = getClosestPlayerToMouse()
+
+        if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local targetPart = closestPlayer.Character.HumanoidRootPart
+            mouse.Hit = targetPart.CFrame
+        end
+    end
+end)
